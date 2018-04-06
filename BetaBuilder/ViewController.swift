@@ -9,7 +9,7 @@
 import Cocoa
 import SSZipArchive
 
-let htmlContent = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" /><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0\"><title>Identity Check - Beta Release</title><style type=\"text/css\">body {background:#fff;margin:0;padding:0;font-family:arial,helvetica,sans-serif;text-align:center;padding:10px;color:#333;font-size:16px;}#container {width:300px;margin:0 auto;}h1 {margin:0;padding:0;font-size:14px;}p {font-size:13px;}.link {background:#46b5f4;border-top:2px solid #fff;border:2px solid #dfebf8;margin-top:.5em;padding:.3em;}.link a {text-decoration:none;font-size:15px;display:block;color:#fff;}</style></head><body><p/><div id=\"container\"><h1>For iOS Users Only</h1><p/><div class=\"link\"><a href=\"itms-services://?action=download-manifest&url=PLIST_LINK\">Tap to Install<br/>APP_NAME</a></div><p/><p><strong>Link didn't work?</strong><br />Make sure you're visiting this page on your device, not your computer.</p></div></body></html>"
+let htmlContent = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" /><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0\"><title>Identity Check - Beta Release</title><style type=\"text/css\">body {background:#fff;margin:0;padding:0;font-family:arial,helvetica,sans-serif;text-align:center;padding:10px;color:#333;font-size:16px;}#container {width:300px;margin:0 auto;}h1 {margin:0;padding:0;font-size:14px;}p {font-size:13px;}.link {background:#46b5f4;border-top:2px solid #fff;border:2px solid #dfebf8;margin-top:.5em;padding:.3em;}.link a {text-decoration:none;font-size:15px;display:block;color:#fff;}</style></head><body><p/><div id=\"container\"><h1>For iOS Users Only</h1><p/><div class=\"link\"><a href=\"itms-services://?action=download-manifest&url=PLIST_LINK\">Tap to Install<br/>APP_NAME</a></div><p class=\"last_updated\">UPDATE_DATE</p></br><p/><p><strong>Link didn't work?</strong><br />Make sure you're visiting this page on your device, not your computer.</p></div></body></html>"
 
 let plistContent = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>items</key><array><dict><key>assets</key><array><dict><key>kind</key><string>software-package</string><key>url</key><string>LINK.IPA</string></dict></array><key>metadata</key><dict><key>bundle-identifier</key><string>BUNDLE_ID</string><key>bundle-version</key><string>BUNDLE_VERSION</string><key>kind</key><string>software</string><key>title</key><string>BUNDLE_NAME</string></dict></dict></array></dict></plist>"
 
@@ -19,15 +19,15 @@ class ViewController: NSViewController {
     @IBOutlet var selectButton:NSButton?
     @IBOutlet var generateButton:NSButton?
     @IBOutlet var progressIndicator:NSProgressIndicator?
+    @IBOutlet var checkMark:NSButton?
     
     
     @IBOutlet var baseURLField:NSTextField?
     @IBOutlet var bundleIDTextField:NSTextField?
     @IBOutlet var appNameTextField:NSTextField?
     @IBOutlet var versionNumberTextField:NSTextField?
-
+    
     var actualIPAPath:String?
-    var zipPath:String?
     var tempDirPath:String?
     var appPath:String?
     var baseURL: String?
@@ -35,12 +35,13 @@ class ViewController: NSViewController {
     var bundleID:String?
     var appName: String?
     var versionNumber:String?
+    var toRename : String?
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.generateButton?.isEnabled = false
         self.progressIndicator?.isHidden = true
         self.progressIndicator?.startAnimation(self)
+        self.generateButton?.isEnabled = false
         
     }
     
@@ -69,18 +70,81 @@ class ViewController: NSViewController {
                 self.textField?.isEnabled = true
                 self.textField?.isEditable = false
                 self.textField?.stringValue = url.absoluteString.replacingOccurrences(of: "file://", with: "")
-                self.generateButton?.isEnabled = true
+                self.generateButton?.isHidden = true
+                self.progressIndicator?.isHidden = false
+                
+                self.appNameTextField?.stringValue = "App Name:"
+                self.bundleIDTextField?.stringValue = "Bundle ID:"
+                self.versionNumberTextField?.stringValue = "Version No:"
+                
+                DispatchQueue.global(qos: .background).async {
+                    self.populateDetails()
+                }
             }
         }
     }
     
+    internal func populateDetails() {
+        
+        let fileManager = FileManager.default
+        
+        let ipaSourceURL = URL.init(fileURLWithPath: self.actualIPAPath!)
+        
+        let ipaDestinationPathString = "\(NSTemporaryDirectory())/\(ipaSourceURL.lastPathComponent)"
+        
+        let ipaDestinationURL = URL.init(fileURLWithPath:ipaDestinationPathString)
+        
+        try? fileManager.removeItem(at: ipaDestinationURL)
+        try? fileManager.copyItem(at: ipaDestinationURL, to: ipaSourceURL)
+        
+        let unzippedFolderPath = NSTemporaryDirectory().appending("unzippedFolder")
+        
+        try? fileManager.removeItem(at: URL.init(fileURLWithPath: unzippedFolderPath))
+        
+        SSZipArchive.unzipFile(atPath: ipaSourceURL.path, toDestination: URL.init(fileURLWithPath: unzippedFolderPath).path)
+        
+        self.tempDirPath = unzippedFolderPath
+        
+        self.fetchBundleInfo()
+    }
+
+    
     @IBAction func generateFiles(_ sender: Any){
         
-        self.baseURL = self.baseURLField?.stringValue
+        if self.checkMark?.state == .on{
+            
+            if self.inputPrompt(){
+                
+                if self.toRename != nil {
+                    
+                    let ipaSourceURL = URL.init(fileURLWithPath: self.actualIPAPath!)
+                    
+                    let ipaName = URL(fileURLWithPath: self.actualIPAPath!).lastPathComponent
+                    let newIpaName = self.actualIPAPath?.replacingOccurrences(of: ipaName, with: "\(self.toRename!).ipa")
+                    let fileManager = FileManager.default
+                    
+                    try? fileManager.moveItem(at: ipaSourceURL, to: URL.init(fileURLWithPath: newIpaName!))
+                    self.actualIPAPath = newIpaName!
+                    self.ipaName = URL.init(fileURLWithPath: self.actualIPAPath!).deletingPathExtension().lastPathComponent
+                    
+                    self.createFiles()
+                    
+                }else{
+                    let alert = NSAlert()
+                    alert.addButton(withTitle: "OK")
+                    alert.messageText = "Please enter the new IPA name"
+                    alert.alertStyle = .critical
+                    alert.runModal()
+                }
+            }
+        }else{
+            self.createFiles()
+        }
+    }
+    
+    internal func createFiles(){
         
-        self.appNameTextField?.stringValue = "App Name:"
-        self.bundleIDTextField?.stringValue = "Bundle ID:"
-        self.versionNumberTextField?.stringValue = "Version No:"
+        self.baseURL = self.baseURLField?.stringValue
         
         let manager = FileManager()
         if manager.fileExists(atPath: (self.actualIPAPath)!){
@@ -89,14 +153,10 @@ class ViewController: NSViewController {
             self.progressIndicator?.isHidden = false
             
             DispatchQueue.global(qos: .background).async {
-                self.createZipAndUnzip()
-                self.fetchBundleInfo()
                 self.createHTML()
                 self.createPlist()
                 self.deleteTempFiles()
             }
-            
-            
             
         }else{
             let alert = NSAlert()
@@ -107,24 +167,8 @@ class ViewController: NSViewController {
             alert.runModal()
         }
     }
-    
-    internal func createZipAndUnzip(){
-        
-        self.ipaName = URL(fileURLWithPath: self.actualIPAPath!).deletingPathExtension().lastPathComponent
-        
-        // copy file to create .zip
-        let manager = FileManager()
-        
-        self.zipPath = self.actualIPAPath?.replacingOccurrences(of: ".ipa", with: ".zip")
-        try? manager.copyItem(atPath: (self.actualIPAPath)!, toPath: self.zipPath!)
-        
-        self.tempDirPath = "\(URL(fileURLWithPath: self.zipPath!).deletingLastPathComponent().path)/temp"
-        
-        SSZipArchive.unzipFile(atPath: zipPath!, toDestination:self.tempDirPath!)
-    }
-    
     internal func fetchBundleInfo(){
-       
+        
         let manager = FileManager()
         let stringsArray:[String]? = try? manager.contentsOfDirectory(atPath: "\(self.tempDirPath!)/Payload")
         
@@ -142,7 +186,7 @@ class ViewController: NSViewController {
             let buildNo = bundlePlistDict.value(forKey: "CFBundleVersion") as! String
             self.bundleID = bundlePlistDict.value(forKey: "CFBundleIdentifier") as? String
             self.appName = bundlePlistDict.value(forKey: "CFBundleDisplayName") as? String
-            
+            self.ipaName = URL.init(fileURLWithPath: self.actualIPAPath!).deletingPathExtension().lastPathComponent
             // Display Values
             DispatchQueue.main.async {
                 
@@ -152,6 +196,10 @@ class ViewController: NSViewController {
                 if (bundlePlistDict.value(forKey: "CFBundleDisplayName") != nil){
                     self.appNameTextField?.stringValue = "App Name: \(self.appName!)"
                 }
+                self.progressIndicator?.isHidden = true
+                self.generateButton?.isHidden = false
+                self.generateButton?.isEnabled = true
+                
             }
         }
         
@@ -159,7 +207,7 @@ class ViewController: NSViewController {
     
     internal func createHTML(){
         
-        let plistLink = "\(self.baseURL!)/\(self.ipaName!).plist"
+        let plistLink = "\(baseURL!)/\(self.ipaName!).plist"
         
         var html = htmlContent.replacingOccurrences(of: "PLIST_LINK", with: plistLink)
         
@@ -170,7 +218,16 @@ class ViewController: NSViewController {
             html = html.replacingOccurrences(of: "APP_NAME", with: "iOS App")
         }
         
+
+        // Set Date
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd-MMM-yyy HH:mm"
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .medium
+        let myStringDate = formatter.string(from: NSDate() as Date)
+
         
+        html = html.replacingOccurrences(of: "UPDATE_DATE", with: "Last Updated: \(myStringDate) \(NSTimeZone.default.abbreviation()!)")
         
         let manager = FileManager()
         
@@ -184,7 +241,7 @@ class ViewController: NSViewController {
     
     internal func createPlist(){
         
-        let ipaLink = "\(self.baseURL!)/\(self.ipaName!).ipa"
+        let ipaLink = "\(baseURL!)/\(self.ipaName!).ipa"
         
         var plist = plistContent.replacingOccurrences(of: "LINK.IPA", with: ipaLink)
         plist = plist.replacingOccurrences(of: "BUNDLE_ID", with: self.bundleID!)
@@ -211,24 +268,54 @@ class ViewController: NSViewController {
     internal func deleteTempFiles(){
         let manager = FileManager()
         try? manager.removeItem(atPath: self.tempDirPath!)
-        try? manager.removeItem(atPath: self.zipPath!)
         
         DispatchQueue.main.async {
             
             self.generateButton?.isHidden = false
             self.progressIndicator?.isHidden = !(self.generateButton?.isHidden)!
-
+            
             let alert = NSAlert()
             alert.addButton(withTitle: "OK")
             alert.messageText = "Files created successfully!"
             alert.alertStyle = .informational
-            alert.runModal()
+            let response: NSApplication.ModalResponse = alert.runModal()
+
+            if response.rawValue == 1000{
+                //Open Finder
+                NSWorkspace.shared.openFile(URL(fileURLWithPath: self.actualIPAPath!).deletingLastPathComponent().path)
+            }
+
             
-            //Open Finder
-            NSWorkspace.shared.openFile(URL(fileURLWithPath: self.actualIPAPath!).deletingLastPathComponent().path)
+            self.actualIPAPath = nil
+            self.appNameTextField?.stringValue = "App Name:"
+            self.bundleIDTextField?.stringValue = "Bundle ID:"
+            self.versionNumberTextField?.stringValue = "Version No:"
+            self.textField?.stringValue = ""
+            self.generateButton?.isEnabled = false
+            
             
         }
-        
     }
     
+    internal func inputPrompt()->Bool{
+        
+        let alert = NSAlert()
+        alert.addButton(withTitle: "Submit")
+        alert.messageText = "Enter the new IPA name to rename."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Cancel")
+        
+        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+        alert.accessoryView = input
+        input.becomeFirstResponder()
+        let clickedIndex = alert.runModal()
+        
+        if clickedIndex.rawValue == 1000 {
+            if input.stringValue != ""{
+                self.toRename = input.stringValue.trimmingCharacters(in: NSCharacterSet.whitespacesAndNewlines).replacingOccurrences(of: " ", with: "")
+                return true
+            }
+        }
+        return false
+    }
 }
