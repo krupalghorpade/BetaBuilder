@@ -1,6 +1,0 @@
-framework module Pods_BetaBuilder {
-  umbrella header "Pods-BetaBuilder-umbrella.h"
-
-  export *
-  module * { export * }
-}
