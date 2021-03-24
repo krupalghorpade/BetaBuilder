@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 48;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -99,7 +99,6 @@
 				9ABB9B7E206BD51800DD7DDF /* Frameworks */,
 				9ABB9B7F206BD51800DD7DDF /* Resources */,
 				6CB01A887B62B07F0DF692D6 /* [CP] Embed Pods Frameworks */,
-				7D531D5279142A08645D0B07 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -128,7 +127,7 @@
 				};
 			};
 			buildConfigurationList = 9ABB9B7C206BD51800DD7DDF /* Build configuration list for PBXProject "BetaBuilder" */;
-			compatibilityVersion = "Xcode 8.0";
+			compatibilityVersion = "Xcode 11.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -164,7 +163,7 @@
 			files = (
 			);
 			inputPaths = (
-				"${SRCROOT}/Pods/Target Support Files/Pods-BetaBuilder/Pods-BetaBuilder-frameworks.sh",
+				"${PODS_ROOT}/Target Support Files/Pods-BetaBuilder/Pods-BetaBuilder-frameworks.sh",
 				"${BUILT_PRODUCTS_DIR}/SSZipArchive/SSZipArchive.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
@@ -173,22 +172,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-BetaBuilder/Pods-BetaBuilder-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		7D531D5279142A08645D0B07 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-BetaBuilder/Pods-BetaBuilder-resources.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-BetaBuilder/Pods-BetaBuilder-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		ABA4936028141CFB6207FDC2 /* [CP] Check Pods Manifest.lock */ = {
@@ -343,7 +327,8 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 			};
 			name = Release;
 		};
@@ -358,7 +343,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = AFXVCL29QY;
 				INFOPLIST_FILE = BetaBuilder/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.BetaIPABuilder.dev.BetaBuilder;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -377,7 +365,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = AFXVCL29QY;
 				INFOPLIST_FILE = BetaBuilder/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.BetaIPABuilder.dev.BetaBuilder;
 				PRODUCT_NAME = "$(TARGET_NAME)";
